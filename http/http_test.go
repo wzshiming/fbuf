@@ -7,7 +7,7 @@ import (
 )
 
 func TestHttp(t *testing.T) {
-	b, err := fbuf.Defaul.Open("http://www.baidu.com")
+	b, err := fbuf.NewFbuf().Read("buff http://weibo.com/login.php")
 	if err != nil {
 		t.Error(err)
 	}
@@ -15,7 +15,7 @@ func TestHttp(t *testing.T) {
 }
 
 func TestHttps(t *testing.T) {
-	b, err := fbuf.Defaul.Open("https://github.com")
+	b, err := fbuf.NewFbuf().Read("buff https://github.com")
 	if err != nil {
 		t.Error(err)
 	}
@@ -23,7 +23,7 @@ func TestHttps(t *testing.T) {
 }
 
 func TestPostHttps(t *testing.T) {
-	b, err := fbuf.Defaul.Open("http://www.w3school.com.cn/tiy/v.asp", "post", map[string]string{
+	b, err := fbuf.NewFbuf().Read("rebuff post http://www.w3school.com.cn/tiy/v.asp", map[string]string{
 		"code": `11`,
 		"bt":   "",
 	})

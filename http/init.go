@@ -10,11 +10,6 @@ import (
 	"github.com/wzshiming/fbuf"
 )
 
-const (
-	GET  = "GET"
-	POST = "POST"
-)
-
 func init() {
 
 	httpClient := &http.Client{
@@ -25,16 +20,33 @@ func init() {
 			//DisableCompression: true,
 		},
 	}
-	fbuf.Defaul.RegisterReg("http", `^http://`, `^https://`)
+
+	fbuf.Defaul.RegisterRegexp("get", `^get `)
+	fbuf.Defaul.RegisterRead("get", func(name string, args ...interface{}) ([]byte, error) {
+		if strings.Index(name, "get ") == 0 {
+			name = name[4:]
+		}
+		return fbuf.Defaul.ReadByMethod("http", name, args...)
+	})
+
+	fbuf.Defaul.RegisterRegexp("post", `^post `)
+	fbuf.Defaul.RegisterRead("post", func(name string, args ...interface{}) ([]byte, error) {
+		if strings.Index(name, "post ") == 0 {
+			name = name[5:]
+		}
+		return fbuf.Defaul.ReadByMethod("http", name, append(args, http.MethodPost)...)
+	})
+
+	fbuf.Defaul.RegisterRegexp("http", `^http://`, `^https://`)
 	fbuf.Defaul.RegisterRead("http", func(name string, args ...interface{}) ([]byte, error) {
-		met := GET
+		met := http.MethodGet
 		arg := url.Values{}
 		for _, v := range args {
 			switch v.(type) {
 			case string:
 				v0 := v.(string)
 				v0 = strings.ToUpper(v0)
-				if v0 == POST {
+				if v0 == http.MethodPost {
 					met = v0
 				}
 			case url.Values:
@@ -48,7 +60,7 @@ func init() {
 		}
 		var res *http.Response
 		var err error
-		if met == POST {
+		if met == http.MethodPost {
 			res, err = httpClient.PostForm(name, arg)
 		} else {
 			n, va := urlParse(name, arg)
@@ -60,6 +72,7 @@ func init() {
 		}
 		return ioutil.ReadAll(res.Body)
 	})
+
 }
 
 func urlParse(que string, args url.Values) (string, url.Values) {

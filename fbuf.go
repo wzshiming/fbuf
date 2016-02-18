@@ -1,20 +1,17 @@
 package fbuf
 
 import (
-	"encoding/base64"
-	"errors"
+	"fmt"
 	"regexp"
 )
-
-var dirname = "_gofbuf"
 
 type readMethod func(name string, args ...interface{}) ([]byte, error)
 type writeMethod func(name string, data []byte, args ...interface{}) error
 
 type method struct {
-	regexp      []*regexp.Regexp
-	readMethod  readMethod
-	writeMethod writeMethod
+	regexp []*regexp.Regexp
+	read   readMethod
+	write  writeMethod
 }
 
 type fbuf struct {
@@ -28,7 +25,15 @@ func newFbuf() *fbuf {
 	return fb
 }
 
-func (fb *fbuf) RegisterReg(name string, regs ...string) {
+func NewFbuf() *fbuf {
+	fb := newFbuf()
+	for k, v := range Defaul.methods {
+		fb.methods[k] = v
+	}
+	return fb
+}
+
+func (fb *fbuf) RegisterRegexp(name string, regs ...string) {
 	if fb.methods[name] == nil {
 		fb.methods[name] = &method{}
 	}
@@ -44,7 +49,7 @@ func (fb *fbuf) RegisterRead(name string, met readMethod) {
 	if fb.methods[name] == nil {
 		fb.methods[name] = &method{}
 	}
-	fb.methods[name].readMethod = met
+	fb.methods[name].read = met
 	return
 }
 
@@ -52,7 +57,7 @@ func (fb *fbuf) RegisterWrite(name string, met writeMethod) {
 	if fb.methods[name] == nil {
 		fb.methods[name] = &method{}
 	}
-	fb.methods[name].writeMethod = met
+	fb.methods[name].write = met
 	return
 }
 
@@ -68,7 +73,7 @@ func (fb *fbuf) matchMethod(name string) map[string]int {
 	return r
 }
 
-func (fb *fbuf) MatchMethod(name string) string {
+func (fb *fbuf) MatchMethod(name string) []string {
 	ss := fb.matchMethod(name)
 	sort := []string{}
 	si := 0
@@ -83,47 +88,49 @@ func (fb *fbuf) MatchMethod(name string) string {
 		}
 	}
 
-	switch len(sort) {
-	case 0:
-		return "file"
-	case 1:
-		return sort[0]
-	default:
-		return sort[0] // 如果有多个符合条件的 还没写
+	if len(sort) == 0 {
+		return []string{"file"}
 	}
-	return "file"
+	return sort
 }
 
-func (fb *fbuf) Save(name string, data []byte, args ...interface{}) error {
-	return fb.SaveByMethod(fb.MatchMethod(name), name, data, args...)
+func (fb *fbuf) Write(name string, data []byte, args ...interface{}) error {
+	so := fb.MatchMethod(name)
+	var err error
+	for _, v := range so {
+		err = fb.WriteByMethod(v, name, data, args...)
+		if err == nil {
+			return nil
+		}
+	}
+	return err
 }
 
-func (fb *fbuf) SaveByMethod(method, name string, data []byte, args ...interface{}) error {
+func (fb *fbuf) WriteByMethod(method, name string, data []byte, args ...interface{}) error {
 	met := fb.methods[method]
-	if met == nil {
-		return errors.New("SaveByMethod: The method does not exist")
+	if met == nil || met.write == nil {
+		return fmt.Errorf("write %s %s: The method does not exist", method, name)
 	}
-	return met.writeMethod(name, data, args...)
+	return met.write(name, data, args...)
 }
 
-func (fb *fbuf) Open(name string, args ...interface{}) ([]byte, error) {
-	return fb.OpenByMethod(fb.MatchMethod(name), name, args...)
+func (fb *fbuf) Read(name string, args ...interface{}) ([]byte, error) {
+	so := fb.MatchMethod(name)
+	var err error
+	var data []byte
+	for _, v := range so {
+		data, err = fb.ReadByMethod(v, name, args...)
+		if err == nil {
+			return data, nil
+		}
+	}
+	return nil, err
 }
 
-func (fb *fbuf) OpenByMethod(method, name string, args ...interface{}) ([]byte, error) {
+func (fb *fbuf) ReadByMethod(method, name string, args ...interface{}) ([]byte, error) {
 	met := fb.methods[method]
-	if met == nil {
-		return nil, errors.New("OpenByMethod: The method does not exist")
+	if met == nil || met.read == nil {
+		return nil, fmt.Errorf("read %s %s: The method does not exist", method, name)
 	}
-	return met.readMethod(name, args...)
-}
-
-func (fb *fbuf) getTempRootDir() string {
-	return joinPath(selfDir(), dirname)
-}
-
-func (fb *fbuf) TempDir(method, name string) (string, error) {
-	na := base64.RawStdEncoding.EncodeToString([]byte(name))
-	dir := joinPath(fb.getTempRootDir(), method, na)
-	return dir, mkDir(dir)
+	return met.read(name, args...)
 }
