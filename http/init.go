@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"strings"
 
@@ -12,13 +13,14 @@ import (
 
 func init() {
 
+	cookieJar, _ := cookiejar.New(nil)
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
-			//DisableCompression: true,
 		},
+		Jar: cookieJar,
 	}
 
 	fbuf.Defaul.RegisterRegexp("get", `^get `)
