@@ -11,6 +11,18 @@ import (
 	"github.com/wzshiming/fbuf"
 )
 
+const (
+	MethodGet     = "GET"
+	MethodHead    = "HEAD"
+	MethodPost    = "POST"
+	MethodPut     = "PUT"
+	MethodPatch   = "PATCH" // RFC 5741
+	MethodDelete  = "DELETE"
+	MethodConnect = "CONNECT"
+	MethodOptions = "OPTIONS"
+	MethodTrace   = "TRACE"
+)
+
 func init() {
 
 	cookieJar, _ := cookiejar.New(nil)
@@ -36,19 +48,19 @@ func init() {
 		if strings.Index(name, "post ") == 0 {
 			name = name[5:]
 		}
-		return fbuf.Defaul.ReadByMethod("http", name, append(args, http.MethodPost)...)
+		return fbuf.Defaul.ReadByMethod("http", name, append(args, MethodPost)...)
 	})
 
 	fbuf.Defaul.RegisterRegexp("http", `^http://`, `^https://`)
 	fbuf.Defaul.RegisterRead("http", func(name string, args ...interface{}) ([]byte, error) {
-		met := http.MethodGet
+		met := MethodGet
 		arg := url.Values{}
 		for _, v := range args {
 			switch v.(type) {
 			case string:
 				v0 := v.(string)
 				v0 = strings.ToUpper(v0)
-				if v0 == http.MethodPost {
+				if v0 == MethodPost {
 					met = v0
 				}
 			case url.Values:
@@ -62,7 +74,7 @@ func init() {
 		}
 		var res *http.Response
 		var err error
-		if met == http.MethodPost {
+		if met == MethodPost {
 			res, err = httpClient.PostForm(name, arg)
 		} else {
 			n, va := urlParse(name, arg)
