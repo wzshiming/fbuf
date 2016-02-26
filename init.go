@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 )
 
 var Defaul = newFbuf()
@@ -35,20 +34,16 @@ func init() {
 
 	// 临时文件
 	mc := regexp.MustCompile("[\\/:*?\"<>|]")
-	Defaul.RegisterRegexp("temp", `^temp `)
+	Defaul.RegisterRegexp("temp", `^temp\s+`)
 	Defaul.RegisterRead("temp", func(name string, args ...interface{}) ([]byte, error) {
-		if strings.Index(name, "temp ") == 0 {
-			name = name[5:]
-		}
+		name = regexp.MustCompile(`^temp\s+`).ReplaceAllString(name, "")
 		// 定位到临时文件夹读取
 		name = mc.ReplaceAllString(name, "/")
 		name = joinPath(tempDir(), name)
 		return Defaul.ReadByMethod("file", name, args...)
 	})
 	Defaul.RegisterWrite("temp", func(name string, data []byte, args ...interface{}) error {
-		if strings.Index(name, "temp ") == 0 {
-			name = name[5:]
-		}
+		name = regexp.MustCompile(`^temp\s+`).ReplaceAllString(name, "")
 		// 定位到临时文件夹写入
 		name = mc.ReplaceAllString(name, "/")
 		name = joinPath(tempDir(), name)
@@ -56,11 +51,9 @@ func init() {
 	})
 
 	// 缓存文件
-	Defaul.RegisterRegexp("buff", `^buff `)
+	Defaul.RegisterRegexp("buff", `^buff\s+`)
 	Defaul.RegisterRead("buff", func(name string, args ...interface{}) ([]byte, error) {
-		if strings.Index(name, "buff ") == 0 {
-			name = name[5:]
-		}
+		name = regexp.MustCompile(`^buff\s+`).ReplaceAllString(name, "")
 		// 从缓存里查找
 		d, err := Defaul.ReadByMethod("temp", name)
 		if err != nil {
@@ -71,11 +64,9 @@ func init() {
 	})
 
 	// 重新加载缓存文件
-	Defaul.RegisterRegexp("rebuff", `^rebuff `)
+	Defaul.RegisterRegexp("rebuff", `^rebuff\s+`)
 	Defaul.RegisterRead("rebuff", func(name string, args ...interface{}) ([]byte, error) {
-		if strings.Index(name, "rebuff ") == 0 {
-			name = name[7:]
-		}
+		name = regexp.MustCompile(`^rebuff\s+`).ReplaceAllString(name, "")
 		// 加载请求
 		d, err := Defaul.Read(name, args...)
 		if err != nil {

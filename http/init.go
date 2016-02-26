@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/wzshiming/fbuf"
@@ -35,19 +36,15 @@ func init() {
 		Jar: cookieJar,
 	}
 
-	fbuf.Defaul.RegisterRegexp("get", `^get `)
+	fbuf.Defaul.RegisterRegexp("get", `^get\s+`)
 	fbuf.Defaul.RegisterRead("get", func(name string, args ...interface{}) ([]byte, error) {
-		if strings.Index(name, "get ") == 0 {
-			name = name[4:]
-		}
+		name = regexp.MustCompile(`^get\s+`).ReplaceAllString(name, "")
 		return fbuf.Defaul.ReadByMethod("http", name, args...)
 	})
 
-	fbuf.Defaul.RegisterRegexp("post", `^post `)
+	fbuf.Defaul.RegisterRegexp("post", `^post\s+`)
 	fbuf.Defaul.RegisterRead("post", func(name string, args ...interface{}) ([]byte, error) {
-		if strings.Index(name, "post ") == 0 {
-			name = name[5:]
-		}
+		name = regexp.MustCompile(`^post\s+`).ReplaceAllString(name, "")
 		return fbuf.Defaul.ReadByMethod("http", name, append(args, MethodPost)...)
 	})
 
