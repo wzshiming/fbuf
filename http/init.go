@@ -24,6 +24,10 @@ const (
 	MethodTrace   = "TRACE"
 )
 
+var (
+	UserAgent = "Mozilla/4.0 (Windows; MSIE 6.0; Windows NT 5.2)"
+)
+
 func init() {
 
 	cookieJar, _ := cookiejar.New(nil)
@@ -69,15 +73,23 @@ func init() {
 				}
 			}
 		}
-		var res *http.Response
+
+		var req *http.Request
 		var err error
-		if met == MethodPost {
-			res, err = httpClient.PostForm(name, arg)
-		} else {
-			n, va := urlParse(name, arg)
-			name = n + "?" + va.Encode()
-			res, err = httpClient.Get(name)
+		switch met {
+		case MethodPost:
+			req, err = http.NewRequest(MethodPost, name, strings.NewReader(arg.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		case MethodGet:
+			req, err = http.NewRequest(MethodGet, name+"?"+arg.Encode(), nil)
+		default:
 		}
+		req.Header.Set("User-Agent", UserAgent)
+		if err != nil {
+			return nil, err
+		}
+
+		res, err := httpClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
